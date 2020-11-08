@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/rhallman96/go-tetris/game"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
 const (
-	gridWidth   = 240
+	gridWidth   = 264
 	gridHeight  = 480
 	blockWidth  = 24
 	blockHeight = 24
@@ -39,7 +40,7 @@ func main() {
 		panic(err)
 	}
 
-	board := &Board{}
+	board := &game.Board{}
 	board.Reset()
 
 	running := true
@@ -53,10 +54,13 @@ func main() {
 		}
 		renderBoard(board, surface)
 		window.UpdateSurface()
+		if !board.DropPiece() {
+			board.NextPiece()
+		}
 	}
 }
 
-func renderBoard(board *Board, surface *sdl.Surface) {
+func renderBoard(board *game.Board, surface *sdl.Surface) {
 	rect := sdl.Rect{0, 0, gridWidth, gridHeight}
 	surface.FillRect(&rect, 0xffffffff)
 
@@ -64,7 +68,7 @@ func renderBoard(board *Board, surface *sdl.Surface) {
 	renderPiece(&board.Piece, surface)
 }
 
-func renderGrid(grid [][]BlockValue, surface *sdl.Surface) {
+func renderGrid(grid [][]game.BlockValue, surface *sdl.Surface) {
 	for i, row := range grid {
 		for j, value := range row {
 			renderBlock(j, i, value, surface)
@@ -72,14 +76,14 @@ func renderGrid(grid [][]BlockValue, surface *sdl.Surface) {
 	}
 }
 
-func renderPiece(piece *Piece, surface *sdl.Surface) {
+func renderPiece(piece *game.Piece, surface *sdl.Surface) {
 	shape := piece.GetShape()
 	for _, point := range shape {
 		renderBlock(point.X, point.Y, piece.Value, surface)
 	}
 }
 
-func renderBlock(x, y int, value BlockValue, surface *sdl.Surface) {
+func renderBlock(x, y int, value game.BlockValue, surface *sdl.Surface) {
 	if value == 0 {
 		return
 	}

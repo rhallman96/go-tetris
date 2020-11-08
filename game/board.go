@@ -1,8 +1,13 @@
-package main
+package game
+
+import (
+	"math/rand"
+	"time"
+)
 
 const (
 	BoardHeight = 20
-	BoardWidth  = 10
+	BoardWidth  = 11
 )
 
 // On the game board, any value other than zero indicates a block is present.
@@ -28,6 +33,7 @@ type Board struct {
 	Piece Piece
 }
 
+// Rotations are pre-computed for each unique kind of Piece.
 var pieceRotations = [][]Shape{
 
 	// Square
@@ -71,12 +77,26 @@ var pieceRotations = [][]Shape{
 	}.squareRotations(),
 }
 
+// Init function sets seed for random piece generation.
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 // Reset clears the board and selects the initial piece.
 func (board *Board) Reset() {
 	board.Grid = make([][]BlockValue, BoardHeight)
 	for i := 0; i < BoardHeight; i++ {
 		board.Grid[i] = make([]BlockValue, BoardWidth)
 	}
+	board.NextPiece()
+}
+
+func (board *Board) NextPiece() {
+	blockValue := BlockValue(rand.Intn(256))
+	rotations := pieceRotations[rand.Intn(len(pieceRotations))]
+	coords := Point{(BoardWidth / 2) - 1, 0}
+
+	board.Piece = Piece{blockValue, coords, 0, rotations}
 }
 
 // ClearFilledRows removes filled rows from the Board.
@@ -103,6 +123,40 @@ func (board *Board) FilledRowIndices() []int {
 	return rows
 }
 
+func (board *Board) DropPiece() bool {
+	board.Piece.coords.Y++
+	if !board.pieceOverlapsGrid() {
+		return true
+	}
+
+	board.Piece.coords.Y--
+	shape := board.Piece.GetShape()
+
+	for _, point := range shape {
+		board.Grid[point.Y][point.X] = board.Piece.Value
+	}
+
+	return false
+}
+
+func (board *Board) RotatePieceLeft() bool {
+	board.Piece.rotationIndex--
+	if board.pieceOverlapsGrid() {
+		board.Piece.rotationIndex++
+		return false
+	}
+	return true
+}
+
+func (board *Board) RotatePieceRight() bool {
+	board.Piece.rotationIndex++
+	if board.pieceOverlapsGrid() {
+		board.Piece.rotationIndex--
+		return false
+	}
+	return true
+}
+
 func (board *Board) isRowFilled(index int) bool {
 	row := board.Grid[index]
 	for _, v := range row {
@@ -121,25 +175,32 @@ func (board *Board) clearRow(index int) bool {
 	return true
 }
 
+func (board *Board) pieceOverlapsGrid() bool {
+	shape := board.Piece.GetShape()
+	for _, point := range shape {
+		if point.X < 0 || point.X >= BoardWidth ||
+			point.Y < 0 || point.Y >= BoardHeight ||
+			board.Grid[point.Y][point.X] != 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (piece *Piece) GetShape() Shape {
 	if len(piece.rotations) == 0 {
 		return Shape{}
 	}
 
-	shape := piece.rotations[piece.rotationIndex%len(piece.rotations)]
+	rotation := piece.rotations[piece.rotationIndex%len(piece.rotations)]
+	shape := make(Shape, 4)
+	copy(shape, rotation)
+
 	for i, _ := range shape {
 		shape[i].X += piece.coords.X
 		shape[i].Y += piece.coords.Y
 	}
 	return shape
-}
-
-func (piece *Piece) RotateLeft() bool {
-	return true
-}
-
-func (piece *Piece) RotateRight() bool {
-	return true
 }
 
 func (shape Shape) squareRotations() []Shape {
@@ -148,7 +209,7 @@ func (shape Shape) squareRotations() []Shape {
 		for j, point := range shape {
 			x := point.X
 			point.X = point.Y
-			point.Y = -x
+			point.Y = 2 - x
 			shape[j] = point
 		}
 		transforms = append(transforms, shape)
@@ -159,12 +220,6 @@ func (shape Shape) squareRotations() []Shape {
 
 func (shape Shape) flipRotations() []Shape {
 	transforms := []Shape{shape}
-	flipped := shape
-	for i, _ := range flipped {
-		flipped[i].X = shape[i].Y
-		flipped[i].Y = shape[i].X
-	}
-	transforms = append(transforms, flipped)
 	return transforms
 }
 
