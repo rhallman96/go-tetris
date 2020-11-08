@@ -10,67 +10,9 @@ const (
 	BoardWidth  = 11
 )
 
-// Init function sets seed for random piece generation.
+// init function sets seed for random piece generation.
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
-}
-
-type Shape []Point
-
-type Point struct {
-	X, Y int
-}
-
-type Piece struct {
-	Value int
-
-	coords        Point
-	rotationIndex int
-	rotations     []Shape
-}
-
-// Rotations are pre-computed for each unique kind of piece.
-var pieceRotations = [][]Shape{
-
-	// Square
-	Shape{
-		{0, 0},
-		{0, 1},
-		{1, 0},
-		{1, 1},
-	}.identityRotations(),
-
-	// Line
-	Shape{
-		{1, 0},
-		{1, 1},
-		{1, 2},
-		{1, 3},
-	}.flipRotations(),
-
-	// T-Shape
-	Shape{
-		{0, 1},
-		{1, 1},
-		{2, 1},
-		{1, 2},
-	}.squareRotations(),
-
-	// L-Shape
-	Shape{
-		{1, 0},
-		{1, 1},
-		{1, 2},
-		{2, 2},
-	}.squareRotations(),
-
-	// Flipped L-Shape
-	Shape{
-		{1, 0},
-		{1, 1},
-		{1, 2},
-		{0, 2},
-	}.squareRotations(),
 }
 
 type Board struct {
@@ -93,7 +35,7 @@ func (board *Board) NextPiece() bool {
 	coords := Point{(BoardWidth / 2) - 1, 0}
 
 	board.Piece = Piece{blockValue, coords, 0, rotations}
-	if board.pieceOverlapsGrid() {
+	if board.Piece.overlapsGrid(board.Grid) {
 		return false
 	}
 	return true
@@ -125,7 +67,7 @@ func (board *Board) FilledRowIndices() []int {
 
 func (board *Board) DropPiece() bool {
 	board.Piece.coords.Y++
-	if !board.pieceOverlapsGrid() {
+	if !board.Piece.overlapsGrid(board.Grid) {
 		return true
 	}
 
@@ -141,7 +83,7 @@ func (board *Board) DropPiece() bool {
 
 func (board *Board) MovePieceLeft() bool {
 	board.Piece.coords.X--
-	if board.pieceOverlapsGrid() {
+	if board.Piece.overlapsGrid(board.Grid) {
 		board.Piece.coords.X++
 		return false
 	}
@@ -150,7 +92,7 @@ func (board *Board) MovePieceLeft() bool {
 
 func (board *Board) MovePieceRight() bool {
 	board.Piece.coords.X++
-	if board.pieceOverlapsGrid() {
+	if board.Piece.overlapsGrid(board.Grid) {
 		board.Piece.coords.X--
 		return false
 	}
@@ -163,7 +105,7 @@ func (board *Board) RotatePieceLeft() bool {
 		board.Piece.rotationIndex += len(board.Piece.rotations)
 	}
 
-	if board.pieceOverlapsGrid() {
+	if board.Piece.overlapsGrid(board.Grid) {
 		board.Piece.rotationIndex++
 		return false
 	}
@@ -172,7 +114,7 @@ func (board *Board) RotatePieceLeft() bool {
 
 func (board *Board) RotatePieceRight() bool {
 	board.Piece.rotationIndex++
-	if board.pieceOverlapsGrid() {
+	if board.Piece.overlapsGrid(board.Grid) {
 		board.Piece.rotationIndex--
 		return false
 	}
@@ -195,61 +137,4 @@ func (board *Board) clearRow(index int) bool {
 	}
 	board.Grid[0] = make([]int, BoardWidth)
 	return true
-}
-
-func (board *Board) pieceOverlapsGrid() bool {
-	shape := board.Piece.GetShape()
-	for _, point := range shape {
-		if point.X < 0 || point.X >= BoardWidth ||
-			point.Y < 0 || point.Y >= BoardHeight ||
-			board.Grid[point.Y][point.X] != 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func (piece *Piece) GetShape() Shape {
-	if len(piece.rotations) == 0 {
-		return Shape{}
-	}
-
-	rotation := piece.rotations[piece.rotationIndex%len(piece.rotations)]
-	shape := make(Shape, len(rotation))
-	copy(shape, rotation)
-
-	for i, _ := range shape {
-		shape[i].X += piece.coords.X
-		shape[i].Y += piece.coords.Y
-	}
-	return shape
-}
-
-func (shape Shape) squareRotations() []Shape {
-	transforms := []Shape{shape}
-	for i := 0; i < 3; i++ {
-		next := make(Shape, len(shape))
-		for j, point := range transforms[i] {
-			next[j] = Point{2 - point.Y, point.X}
-		}
-		transforms = append(transforms, next)
-	}
-
-	return transforms
-}
-
-func (shape Shape) flipRotations() []Shape {
-	transforms := []Shape{shape}
-	flip := make(Shape, len(shape))
-	copy(flip, shape)
-	for i, point := range shape {
-		flip[i].X = point.Y
-		flip[i].Y = point.X
-	}
-	transforms = append(transforms, flip)
-	return transforms
-}
-
-func (shape Shape) identityRotations() []Shape {
-	return []Shape{shape}
 }
