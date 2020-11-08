@@ -1,8 +1,12 @@
 package main
 
 import (
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/imdraw"
+	"github.com/faiface/pixel/pixelgl"
 	"github.com/rhallman96/go-tetris/game"
-	"github.com/veandco/go-sdl2/sdl"
+	"golang.org/x/image/colornames"
+	"image/color"
 )
 
 const (
@@ -11,86 +15,101 @@ const (
 	blockWidth  = 24
 	blockHeight = 24
 
-	title = "go-tetris"
+	title = "TETRIS"
 )
 
-var colors = []uint32{
-	0xff8080, // red
-	0x80ff80, // green
-	0x8080ff, // blue
+var colors = []color.RGBA{
+	colornames.Tomato,
+	colornames.Skyblue,
+	colornames.Violet,
+	colornames.Lime,
+}
+
+func run() {
+	cfg := pixelgl.WindowConfig{
+		Title:  title,
+		Bounds: pixel.R(0, 0, gridWidth, gridHeight),
+		VSync:  true,
+	}
+	win, err := pixelgl.NewWindow(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	board := game.Board{}
+	board.Reset()
+
+	imd := imdraw.New(nil)
+
+	i := 0
+	for !win.Closed() {
+		i++
+		if i%10 == 0 {
+			if !board.DropPiece() {
+				if !board.NextPiece() {
+					board.Reset()
+				}
+				board.ClearFilledRows()
+			}
+		}
+
+		if win.JustPressed(pixelgl.KeyZ) {
+			board.RotatePieceLeft()
+		} else if win.JustPressed(pixelgl.KeyX) {
+			board.RotatePieceRight()
+		}
+
+		if win.JustPressed(pixelgl.KeyLeft) {
+			board.MovePieceLeft()
+		} else if win.JustPressed(pixelgl.KeyRight) {
+			board.MovePieceRight()
+		}
+
+		if win.Pressed(pixelgl.KeyDown) {
+			i = 9
+		}
+
+		render(&board, imd, win)
+		win.Update()
+	}
 }
 
 func main() {
-
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
-	}
-	defer sdl.Quit()
-
-	window, err := sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		gridWidth, gridHeight, sdl.WINDOW_SHOWN)
-
-	if err != nil {
-		panic(err)
-	}
-	defer window.Destroy()
-
-	surface, err := window.GetSurface()
-	if err != nil {
-		panic(err)
-	}
-
-	board := &game.Board{}
-	board.Reset()
-
-	running := true
-	for running {
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				running = false
-				break
-			}
-		}
-		renderBoard(board, surface)
-		window.UpdateSurface()
-		if !board.DropPiece() {
-			board.NextPiece()
-		}
-	}
+	pixelgl.Run(run)
 }
 
-func renderBoard(board *game.Board, surface *sdl.Surface) {
-	rect := sdl.Rect{0, 0, gridWidth, gridHeight}
-	surface.FillRect(&rect, 0xffffffff)
-
-	renderGrid(board.Grid, surface)
-	renderPiece(&board.Piece, surface)
+func render(board *game.Board, imd *imdraw.IMDraw, win *pixelgl.Window) {
+	imd.Clear()
+	win.Clear(colornames.Snow)
+	renderGrid(board.Grid, imd)
+	renderPiece(&board.Piece, imd)
+	imd.Draw(win)
 }
 
-func renderGrid(grid [][]game.BlockValue, surface *sdl.Surface) {
+func renderGrid(grid [][]int, imd *imdraw.IMDraw) {
 	for i, row := range grid {
 		for j, value := range row {
-			renderBlock(j, i, value, surface)
+			renderBlock(j, i, value, imd)
 		}
 	}
 }
 
-func renderPiece(piece *game.Piece, surface *sdl.Surface) {
+func renderPiece(piece *game.Piece, imd *imdraw.IMDraw) {
 	shape := piece.GetShape()
 	for _, point := range shape {
-		renderBlock(point.X, point.Y, piece.Value, surface)
+		renderBlock(point.X, point.Y, piece.Value, imd)
 	}
 }
 
-func renderBlock(x, y int, value game.BlockValue, surface *sdl.Surface) {
+func renderBlock(x, y, value int, imd *imdraw.IMDraw) {
 	if value == 0 {
 		return
 	}
 
-	var xPos int32 = (int32)(x * blockWidth)
-	var yPos int32 = (int32)(y * blockHeight)
-	color := colors[int(value-1)%len(colors)]
-	rect := sdl.Rect{xPos, yPos, blockWidth, blockHeight}
-	surface.FillRect(&rect, color)
+	var xPos float64 = float64(x * blockWidth)
+	var yPos float64 = float64(gridHeight - (y * blockHeight))
+
+	imd.Color = colors[int(value-1)%len(colors)]
+	imd.Push(pixel.V(xPos, yPos), pixel.V(xPos+blockWidth, yPos-blockHeight))
+	imd.Rectangle(0)
 }
