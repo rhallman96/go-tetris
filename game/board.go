@@ -10,7 +10,6 @@ const (
 	BoardWidth  = 10
 )
 
-// init function sets seed for random piece selection.
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
