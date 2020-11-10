@@ -7,21 +7,23 @@ import (
 
 const (
 	BoardHeight = 20
-	BoardWidth  = 11
+	BoardWidth  = 10
 )
 
-// init function sets seed for random piece generation.
+// init function sets seed for random piece selection.
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 type Board struct {
-	Grid  [][]int
-	Piece Piece
+	Grid        [][]int
+	Piece       Piece
+	ClearedRows int
 }
 
 // Reset clears the board and selects the initial piece.
 func (board *Board) Reset() {
+	board.ClearedRows = 0
 	board.Grid = make([][]int, BoardHeight)
 	for i := 0; i < BoardHeight; i++ {
 		board.Grid[i] = make([]int, BoardWidth)
@@ -39,6 +41,10 @@ func (board *Board) NextPiece() bool {
 		return false
 	}
 	return true
+}
+
+func (board *Board) Level() int {
+	return board.ClearedRows / 10
 }
 
 // ClearFilledRows removes filled rows from the Board.
@@ -78,7 +84,13 @@ func (board *Board) DropPiece() bool {
 		board.Grid[point.Y][point.X] = board.Piece.Value
 	}
 
+	board.ClearFilledRows()
 	return false
+}
+
+func (board *Board) QuickDropPiece() {
+	for board.DropPiece() {
+	}
 }
 
 func (board *Board) MovePieceLeft() bool {
@@ -136,5 +148,6 @@ func (board *Board) clearRow(index int) bool {
 		board.Grid[i+1] = board.Grid[i]
 	}
 	board.Grid[0] = make([]int, BoardWidth)
+	board.ClearedRows++
 	return true
 }

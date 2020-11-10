@@ -7,15 +7,23 @@ import (
 	"github.com/rhallman96/go-tetris/game"
 	"golang.org/x/image/colornames"
 	"image/color"
+	"time"
 )
 
 const (
-	gridWidth   = 264
+	gridWidth   = 240
 	gridHeight  = 480
 	blockWidth  = 24
 	blockHeight = 24
+	title       = "TETRIS"
 
-	title = "TETRIS"
+	// board updates per second
+	logicalFramerate   uint64 = 25
+	logicalFramerateMS uint64 = (1000 / logicalFramerate)
+
+	// piece falling rates
+	startDropTicks = 12
+	finalDropTicks = 2
 )
 
 var colors = []color.RGBA{
@@ -23,6 +31,10 @@ var colors = []color.RGBA{
 	colornames.Skyblue,
 	colornames.Violet,
 	colornames.Lime,
+}
+
+func main() {
+	pixelgl.Run(run)
 }
 
 func run() {
@@ -36,51 +48,70 @@ func run() {
 		panic(err)
 	}
 
-	board := game.Board{}
+	board := &game.Board{}
 	board.Reset()
-
 	imd := imdraw.New(nil)
 
-	i := 0
+	prevTime := time.Now()
+	var timeCounter uint64 = 0
+	var frameCounter uint64 = 0
 	for !win.Closed() {
-		i++
-		if i%10 == 0 {
-			if !board.DropPiece() {
-				if !board.NextPiece() {
-					board.Reset()
-				}
-				board.ClearFilledRows()
-			}
-		}
+		timeCounter += uint64(time.Since(prevTime).Milliseconds())
+		prevTime = time.Now()
+		logicalTicks := timeCounter / logicalFramerateMS
+		timeCounter %= logicalFramerateMS
+		frameCounter += logicalTicks
 
-		if win.JustPressed(pixelgl.KeyZ) {
-			board.RotatePieceLeft()
-		} else if win.JustPressed(pixelgl.KeyX) {
-			board.RotatePieceRight()
-		}
+		tick(board, win, logicalTicks, frameCounter)
 
-		if win.JustPressed(pixelgl.KeyLeft) {
-			board.MovePieceLeft()
-		} else if win.JustPressed(pixelgl.KeyRight) {
-			board.MovePieceRight()
-		}
-
-		if win.Pressed(pixelgl.KeyDown) {
-			i = 9
-		}
-
-		render(&board, imd, win)
+		render(board, imd, win)
 		win.Update()
 	}
 }
 
-func main() {
-	pixelgl.Run(run)
+func tick(board *game.Board, win *pixelgl.Window, logicalTicks, frameCounter uint64) {
+	for ; logicalTicks > 0; logicalTicks-- {
+		shouldUpdate := (frameCounter%dropTicks(board) == 0) || win.Pressed(pixelgl.KeyDown)
+		if shouldUpdate {
+			if !board.DropPiece() && !board.NextPiece() {
+				board.Reset()
+			}
+		}
+	}
+
+	if win.JustPressed(pixelgl.KeyLeft) {
+		board.MovePieceLeft()
+	}
+
+	if win.JustPressed(pixelgl.KeyRight) {
+		board.MovePieceRight()
+	}
+
+	if win.JustPressed(pixelgl.KeyZ) {
+		board.RotatePieceLeft()
+	}
+
+	if win.JustPressed(pixelgl.KeyX) {
+		board.RotatePieceRight()
+	}
+
+	if win.JustPressed(pixelgl.KeyUp) {
+		board.QuickDropPiece()
+		board.NextPiece()
+	}
+}
+
+func dropTicks(board *game.Board) uint64 {
+	level := board.Level()
+	if level >= startDropTicks-finalDropTicks {
+		return finalDropTicks
+	}
+	return uint64(startDropTicks - level)
 }
 
 func render(board *game.Board, imd *imdraw.IMDraw, win *pixelgl.Window) {
-	imd.Clear()
 	win.Clear(colornames.Snow)
+	imd.Clear()
 	renderGrid(board.Grid, imd)
 	renderPiece(&board.Piece, imd)
 	imd.Draw(win)
