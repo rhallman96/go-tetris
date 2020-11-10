@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	gridWidth   = 240
-	gridHeight  = 480
 	blockWidth  = 24
 	blockHeight = 24
+	gridWidth   = blockWidth * game.BoardWidth
+	gridHeight  = blockHeight * game.BoardHeight
 	title       = "TETRIS"
 
 	// board updates per second

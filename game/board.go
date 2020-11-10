@@ -31,6 +31,7 @@ func (board *Board) Reset() {
 	board.NextPiece()
 }
 
+// NextPiece randomly selects a new piece.
 func (board *Board) NextPiece() bool {
 	blockValue := int(rand.Intn(256))
 	rotations := pieceRotations[rand.Intn(len(pieceRotations))]
@@ -43,13 +44,14 @@ func (board *Board) NextPiece() bool {
 	return true
 }
 
+// Level is the current game level, based on cleared rows.
 func (board *Board) Level() int {
 	return board.ClearedRows / 10
 }
 
-// ClearFilledRows removes filled rows from the Board.
-func (board *Board) ClearFilledRows() {
-	rows := board.FilledRowIndices()
+// clearFilledRows removes filled rows from the Board.
+func (board *Board) clearFilledRows() {
+	rows := board.filledRowIndices()
 	if len(rows) == 0 {
 		return
 	}
@@ -59,18 +61,9 @@ func (board *Board) ClearFilledRows() {
 	}
 }
 
-// FilledRowIndices returns a slice containing the indices of filled rows
-// on the Board. It does not clear these rows or modify the Board's state.
-func (board *Board) FilledRowIndices() []int {
-	var rows []int
-	for i, _ := range board.Grid {
-		if board.isRowFilled(i) {
-			rows = append(rows, i)
-		}
-	}
-	return rows
-}
-
+// DropPiece lowers the current piece by one square. If the piece cannot
+// move any lower, it adds the piece to the grid and clears out filled
+// rows on the board.
 func (board *Board) DropPiece() bool {
 	board.Piece.coords.Y++
 	if !board.Piece.overlapsGrid(board.Grid) {
@@ -84,10 +77,11 @@ func (board *Board) DropPiece() bool {
 		board.Grid[point.Y][point.X] = board.Piece.Value
 	}
 
-	board.ClearFilledRows()
+	board.clearFilledRows()
 	return false
 }
 
+// QuickDropPiece drops a piece until it lands in its final resting place.
 func (board *Board) QuickDropPiece() {
 	for board.DropPiece() {
 	}
@@ -131,6 +125,16 @@ func (board *Board) RotatePieceRight() bool {
 		return false
 	}
 	return true
+}
+
+func (board *Board) filledRowIndices() []int {
+	var rows []int
+	for i, _ := range board.Grid {
+		if board.isRowFilled(i) {
+			rows = append(rows, i)
+		}
+	}
+	return rows
 }
 
 func (board *Board) isRowFilled(index int) bool {
