@@ -15,7 +15,7 @@ func init() {
 }
 
 type Board struct {
-	Grid        [][]int
+	Grid        [][]uint8
 	Piece       Piece
 	ClearedRows int
 }
@@ -23,16 +23,16 @@ type Board struct {
 // Reset clears the board and selects the initial piece.
 func (board *Board) Reset() {
 	board.ClearedRows = 0
-	board.Grid = make([][]int, BoardHeight)
+	board.Grid = make([][]uint8, BoardHeight)
 	for i := 0; i < BoardHeight; i++ {
-		board.Grid[i] = make([]int, BoardWidth)
+		board.Grid[i] = make([]uint8, BoardWidth)
 	}
 	board.NextPiece()
 }
 
 // NextPiece randomly selects a new piece.
 func (board *Board) NextPiece() bool {
-	blockValue := int(rand.Intn(256))
+	blockValue := 1 + uint8(rand.Intn(255))
 	rotations := pieceRotations[rand.Intn(len(pieceRotations))]
 	coords := Point{(BoardWidth / 2) - 1, 0}
 
@@ -150,7 +150,7 @@ func (board *Board) clearRow(index int) bool {
 	for i := index - 1; i >= 0; i-- {
 		board.Grid[i+1] = board.Grid[i]
 	}
-	board.Grid[0] = make([]int, BoardWidth)
+	board.Grid[0] = make([]uint8, BoardWidth)
 	board.ClearedRows++
 	return true
 }

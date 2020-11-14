@@ -7,7 +7,7 @@ type Point struct {
 }
 
 type Piece struct {
-	Value int
+	Value uint8
 
 	coords        Point
 	rotationIndex int
@@ -74,7 +74,7 @@ func (piece *Piece) GetShape() Shape {
 	return shape
 }
 
-func (piece *Piece) overlapsGrid(grid [][]int) bool {
+func (piece *Piece) overlapsGrid(grid [][]uint8) bool {
 	shape := piece.GetShape()
 	for _, point := range shape {
 		if point.X < 0 || point.X >= len(grid[0]) ||
