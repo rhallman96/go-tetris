@@ -117,7 +117,7 @@ func render(board *game.Board, imd *imdraw.IMDraw, win *pixelgl.Window) {
 	imd.Draw(win)
 }
 
-func renderGrid(grid [][]int, imd *imdraw.IMDraw) {
+func renderGrid(grid [][]uint8, imd *imdraw.IMDraw) {
 	for i, row := range grid {
 		for j, value := range row {
 			renderBlock(j, i, value, imd)
@@ -132,7 +132,7 @@ func renderPiece(piece *game.Piece, imd *imdraw.IMDraw) {
 	}
 }
 
-func renderBlock(x, y, value int, imd *imdraw.IMDraw) {
+func renderBlock(x, y int, value uint8, imd *imdraw.IMDraw) {
 	if value == 0 {
 		return
 	}
